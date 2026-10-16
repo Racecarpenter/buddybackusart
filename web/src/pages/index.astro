@@ -1,0 +1,51 @@
+---
+import Base from '../layouts/Base.astro'
+import Img from '../components/Img.astro'
+import ShopWall from '../components/ShopWall.astro'
+import {getProducts, getProjects, getSettings} from '../lib/data'
+import {aspect, imgSrc} from '../lib/image'
+import {availability} from '../lib/format'
+import {cacheFor} from '../lib/cache'
+
+const [settings, projects, products] = await Promise.all([getSettings(), getProjects(), getProducts()])
+cacheFor(Astro.response, 'short') // the print section shows stock
+
+const onSale = products.filter((p) => availability(p) === 'available').slice(0, 4)
+---
+
+<Base image={projects[0] ? imgSrc(projects[0].cover, 1200) : undefined}>
+  <h1 class="sr-only">{settings.siteTitle}</h1>
+  {settings.tagline && <p class="lede">{settings.tagline}</p>}
+
+  {
+    projects.length > 0 ? (
+      <ul class="wall">
+        {projects.slice(0, 8).map((p, i) => (
+          <li style={`--ar:${aspect(p.cover)}`}>
+            <a href={`/work/${p.slug}`}>
+              <Img img={p.cover} sizes="(min-width: 900px) 40vw, 100vw" eager={i < 1} />
+              <span class="plate">
+                <span>{p.title}</span>
+                {p.year && <span class="mute">{p.year}</span>}
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p class="empty">No work here yet. Add a portfolio project in the Studio and it will appear on this page.</p>
+    )
+  }
+
+  {
+    onSale.length > 0 && (
+      <section class="band" aria-labelledby="available">
+        <header class="band-head">
+          <h2 id="available">Available prints</h2>
+          <a href="/shop">All prints</a>
+        </header>
+        <ShopWall products={onSale} />
+      </section>
+    )
+  }
+</Base>

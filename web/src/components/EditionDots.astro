@@ -1,0 +1,31 @@
+---
+// The gallery red dot: one dot per print in the edition, red once sold.
+interface Props {
+  size: number
+  remaining: number
+}
+
+const {size, remaining} = Astro.props
+const sold = Math.min(size, Math.max(0, size - remaining))
+const show = size >= 1
+// Small editions get one dot per print. Larger ones get a thin bar, which stays tidy at any size.
+const asDots = size <= 25
+const pct = Math.round((sold / size) * 100)
+---
+
+{
+  show && !asDots && (
+    <div class="edition-bar" role="img" aria-label={`${sold} of ${size} sold`}>
+      <span style={`width:${pct}%`} />
+    </div>
+  )
+}
+{
+  show && asDots && (
+    <div class="dots" role="img" aria-label={`${sold} of ${size} sold`}>
+      {Array.from({length: size}, (_, i) => (
+        <span class={i < sold ? 'sold' : undefined}></span>
+      ))}
+    </div>
+  )
+}

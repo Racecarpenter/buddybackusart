@@ -1,0 +1,37 @@
+---
+import Base from '../../layouts/Base.astro'
+import Img from '../../components/Img.astro'
+import {getProjects} from '../../lib/data'
+import {aspect, imgSrc} from '../../lib/image'
+import {cacheFor} from '../../lib/cache'
+
+const projects = await getProjects()
+cacheFor(Astro.response, 'long')
+---
+
+<Base
+  title="Work"
+  description="Photographs and prints, grouped by project."
+  image={projects[0] ? imgSrc(projects[0].cover, 1200) : undefined}
+>
+  <h1 class="sr-only">Work</h1>
+  {
+    projects.length > 0 ? (
+      <ul class="wall">
+        {projects.map((p, i) => (
+          <li style={`--ar:${aspect(p.cover)}`}>
+            <a href={`/work/${p.slug}`}>
+              <Img img={p.cover} sizes="(min-width: 900px) 40vw, 100vw" eager={i < 1} />
+              <span class="plate">
+                <span>{p.title}</span>
+                {p.year && <span class="mute">{p.year}</span>}
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p class="empty">No projects yet. Add one in the Studio under Portfolio.</p>
+    )
+  }
+</Base>

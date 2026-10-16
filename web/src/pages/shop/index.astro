@@ -1,0 +1,31 @@
+---
+import Base from '../../layouts/Base.astro'
+import ShopWall from '../../components/ShopWall.astro'
+import {getProducts} from '../../lib/data'
+import {availability} from '../../lib/format'
+import {imgSrc} from '../../lib/image'
+import {cacheFor} from '../../lib/cache'
+
+const products = await getProducts()
+cacheFor(Astro.response, 'short')
+
+// Available prints first, sold-out editions stay visible after them.
+const rank = {available: 0, comingSoon: 1, soldOut: 2}
+const sorted = [...products].sort((a, b) => rank[availability(a)] - rank[availability(b)])
+---
+
+<Base
+  title="Shop"
+  description="Limited-edition prints, printed and shipped by the artist."
+  image={sorted[0]?.cover ? imgSrc(sorted[0].cover, 1200) : undefined}
+>
+  <h1 class="sr-only">Shop</h1>
+  <p class="lede">Limited editions, printed and shipped by the artist. When an edition sells out, it is closed.</p>
+  {
+    sorted.length > 0 ? (
+      <ShopWall products={sorted} eagerCount={1} />
+    ) : (
+      <p class="empty">No prints on sale yet. Add one in the Studio under Prints.</p>
+    )
+  }
+</Base>

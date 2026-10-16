@@ -1,0 +1,23 @@
+---
+import Img from './Img.astro'
+import {aspect, imgSrc} from '../lib/image'
+import type {Img as ImgType} from '../lib/types'
+
+interface Props {
+  images: ImgType[]
+}
+
+const {images} = Astro.props
+---
+
+<ul class="wall bare" data-lb-group>
+  {
+    images.map((image, i) => (
+      <li style={`--ar:${aspect(image)}`}>
+        <a href={imgSrc(image, 2400)} data-lb data-caption={image.caption}>
+          <Img img={image} sizes="(min-width: 900px) 45vw, 100vw" eager={i < 1} />
+        </a>
+      </li>
+    ))
+  }
+</ul>

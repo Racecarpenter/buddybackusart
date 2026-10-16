@@ -1,0 +1,132 @@
+---
+import Base from '../../layouts/Base.astro'
+import Img from '../../components/Img.astro'
+import EditionDots from '../../components/EditionDots.astro'
+import {getProduct, getSettings} from '../../lib/data'
+import {availability, money, MAX_PER_ORDER} from '../../lib/format'
+import {imgSrc} from '../../lib/image'
+import {richText} from '../../lib/richtext'
+import {cacheFor} from '../../lib/cache'
+
+const NOTICES: Record<string, string> = {
+  soldout: 'Sorry, this print just sold out. Nothing was charged.',
+  unavailable: 'This print is not on sale right now. Nothing was charged.',
+  limit: 'That quantity is no longer available. Please choose a smaller number.',
+  setup: 'Checkout is not connected yet. Nothing was charged.',
+  error: 'Something went wrong starting checkout. Nothing was charged. Please try again.',
+}
+
+const product = await getProduct(Astro.params.slug ?? '')
+if (!product) return Astro.rewrite('/404')
+const notice = NOTICES[Astro.url.searchParams.get('notice') ?? '']
+// A page with a message on it is for one person, so it is never cached.
+if (!notice) cacheFor(Astro.response, 'short')
+
+const settings = await getSettings()
+const state = availability(product)
+const remaining = Math.max(0, product.quantity)
+const maxQty = Math.min(remaining, MAX_PER_ORDER)
+const d = product.details
+const lines = [d?.medium, d?.dimensions, d?.signed ? 'Signed and numbered' : undefined].filter(Boolean)
+const shipping = d?.shippingNote || settings.shippingPolicy
+const shipCost = settings.shippingCost ?? 0
+const shipLine = shipCost > 0 ? `Ships within the US. ${money(shipCost)} shipping per order.` : 'Free shipping within the US.'
+const description = richText(product.description)
+const cover = product.images[0]
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Product',
+  name: product.title,
+  image: product.images.map((i) => new URL(imgSrc(i, 1600), Astro.url.origin).href),
+  offers: {
+    '@type': 'Offer',
+    price: product.price,
+    priceCurrency: 'USD',
+    availability: state === 'available' ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+  },
+}
+---
+
+<Base title={product.title} description={`${product.title}. Limited edition of ${product.editionSize}.`} image={cover ? imgSrc(cover, 1200) : undefined}>
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify(jsonLd)}></script>
+
+  <article class="product">
+    <div class="product-media" data-lb-group>
+      {
+        product.images.map((image, i) => (
+          <a href={imgSrc(image, 2400)} data-lb data-caption={image.caption}>
+            <Img img={image} sizes="(min-width: 900px) 60vw, 88vw" eager={i === 0} />
+          </a>
+        ))
+      }
+    </div>
+
+    <div class="product-info">
+      <header>
+        <h1 class="title">{product.title}</h1>
+        {lines.length > 0 && <p class="lines mute">{lines.map((line) => <span>{line}</span>)}</p>}
+      </header>
+
+      <div class="edition">
+        <p>Edition of {product.editionSize}</p>
+        <EditionDots size={product.editionSize} remaining={remaining} />
+        {state === 'available' && <p class="mute">{remaining} of {product.editionSize} remaining</p>}
+      </div>
+
+      {
+        state === 'available' && (
+          <form class="buy" method="post" action="/api/checkout" data-buy>
+            <input type="hidden" name="product" value={product._id} />
+            {maxQty > 1 && (
+              <label class="qty">
+                <span class="qty-label mute">Quantity</span>
+                <select name="quantity">
+                  {Array.from({length: maxQty}, (_, i) => <option value={i + 1}>{i + 1}</option>)}
+                </select>
+              </label>
+            )}
+            <button type="submit">
+              <span>Buy this print</span>
+              <span>{money(product.price)}</span>
+            </button>
+          </form>
+        )
+      }
+      {state === 'available' && <p class="mute small ship-line">{shipLine}</p>}
+      {notice && <p class="notice" role="alert">{notice}</p>}
+      {
+        state === 'soldOut' && (
+          <div>
+            <p class="soldmark">Sold out</p>
+            <p class="mute">This edition is closed.</p>
+            <a class="textlink" href="/shop">See available prints</a>
+          </div>
+        )
+      }
+      {state === 'comingSoon' && <p class="mute">Not on sale yet. Check back soon.</p>}
+
+      {description && <div class="prose" set:html={description} />}
+      {shipping && <p class="mute small">{shipping}</p>}
+    </div>
+  </article>
+</Base>
+
+<script>
+  // Stops a double tap from opening two Stripe sessions. Restores on Back (bfcache).
+  const form = document.querySelector<HTMLFormElement>('[data-buy]')
+  const button = form?.querySelector('button')
+  form?.addEventListener('submit', () => {
+    if (!button) return
+    setTimeout(() => {
+      button.disabled = true
+      button.dataset.busy = ''
+    }, 0)
+  })
+  window.addEventListener('pageshow', () => {
+    if (button) {
+      button.disabled = false
+      delete button.dataset.busy
+    }
+  })
+</script>

@@ -1,0 +1,43 @@
+---
+import Base from '../layouts/Base.astro'
+import Img from '../components/Img.astro'
+import {getSettings} from '../lib/data'
+import {richText} from '../lib/richtext'
+import {imgSrc} from '../lib/image'
+import {cacheFor} from '../lib/cache'
+
+const settings = await getSettings()
+cacheFor(Astro.response, 'long')
+
+const about = richText(settings.about)
+const handle = settings.instagram?.replace(/^@/, '')
+---
+
+<Base
+  title="About"
+  description={settings.tagline}
+  image={settings.aboutImage ? imgSrc(settings.aboutImage, 1200) : undefined}
+>
+  <h1 class="sr-only">About</h1>
+  <div class="about">
+    {settings.aboutImage && <Img img={settings.aboutImage} sizes="(min-width: 900px) 40vw, 100vw" eager />}
+    <div class="about-text">
+      {
+        about ? (
+          <div class="prose large" set:html={about} />
+        ) : (
+          <p class="empty">Nothing here yet. Write a short About text in the Studio under Site settings.</p>
+        )
+      }
+      {
+        (settings.email || handle) && (
+          <p class="contact">
+            {settings.email && <a href={`mailto:${settings.email}`}>{settings.email}</a>}
+            {handle && <a href={`https://instagram.com/${handle}`} rel="noopener">Instagram, @{handle}</a>}
+          </p>
+        )
+      }
+      {settings.shippingPolicy && <p class="mute small">{settings.shippingPolicy}</p>}
+    </div>
+  </div>
+</Base>

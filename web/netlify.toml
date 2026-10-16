@@ -1,0 +1,6 @@
+# In Netlify, set the site's Base directory to "web" (Site configuration > Build & deploy).
+[build]
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "22"

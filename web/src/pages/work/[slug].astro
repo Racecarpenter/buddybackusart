@@ -1,0 +1,42 @@
+---
+import Base from '../../layouts/Base.astro'
+import Gallery from '../../components/Gallery.astro'
+import ShopWall from '../../components/ShopWall.astro'
+import {getProject} from '../../lib/data'
+import {imgSrc} from '../../lib/image'
+import {cacheFor} from '../../lib/cache'
+
+const project = await getProject(Astro.params.slug ?? '')
+if (!project) return Astro.rewrite('/404')
+cacheFor(Astro.response, 'short') // related prints show stock
+
+const images = project.gallery.length > 0 ? project.gallery : [project.cover]
+---
+
+<Base
+  title={project.title}
+  description={project.summary}
+  image={imgSrc(project.cover, 1200)}
+>
+  <header class="pagehead">
+    <div>
+      <h1 class="title">{project.title}</h1>
+      {project.year && <p class="mute">{project.year}</p>}
+    </div>
+    {project.summary && <p class="prose">{project.summary}</p>}
+  </header>
+
+  <Gallery images={images} />
+
+  {
+    project.related.length > 0 && (
+      <section class="band" aria-labelledby="prints">
+        <header class="band-head">
+          <h2 id="prints">Prints from this project</h2>
+          <a href="/shop">All prints</a>
+        </header>
+        <ShopWall products={project.related} />
+      </section>
+    )
+  }
+</Base>

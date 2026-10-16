@@ -1,0 +1,88 @@
+<dialog id="lightbox" aria-label="Image viewer">
+  <figure>
+    <img alt="" />
+    <figcaption></figcaption>
+  </figure>
+  <div class="lb-bar">
+    <button type="button" data-lb-prev>Previous</button>
+    <span data-lb-count></span>
+    <button type="button" data-lb-next>Next</button>
+    <button type="button" data-lb-close>Close</button>
+  </div>
+</dialog>
+
+<script>
+  // Opens any link marked data-lb. Links in the same data-lb-group page through together.
+  const dialog = document.getElementById('lightbox') as HTMLDialogElement | null
+
+  if (dialog) {
+    const image = dialog.querySelector('img') as HTMLImageElement
+    const caption = dialog.querySelector('figcaption') as HTMLElement
+    const count = dialog.querySelector('[data-lb-count]') as HTMLElement
+    let items: HTMLAnchorElement[] = []
+    let index = 0
+
+    const show = (n: number) => {
+      index = (n + items.length) % items.length
+      const link = items[index]
+      image.src = link.href
+      image.alt = link.querySelector('img')?.alt ?? ''
+      caption.textContent = link.dataset.caption ?? ''
+      count.textContent = items.length > 1 ? `${index + 1} of ${items.length}` : ''
+      dialog.classList.toggle('single', items.length < 2)
+    }
+
+    document.addEventListener('click', (event) => {
+      const link = (event.target as Element).closest<HTMLAnchorElement>('a[data-lb]')
+      if (!link) return
+      event.preventDefault()
+      const group = link.closest('[data-lb-group]') ?? document
+      items = Array.from(group.querySelectorAll<HTMLAnchorElement>('a[data-lb]'))
+      show(items.indexOf(link))
+      dialog.showModal()
+    })
+
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) dialog.close()
+    })
+    // Swipe left or right to move between photos. Pinch-zoom still works: swipes are ignored while zoomed in.
+    const figure = dialog.querySelector('figure') as HTMLElement
+    let startX = 0
+    let startY = 0
+    let swiped = false
+    figure.addEventListener(
+      'touchstart',
+      (event) => {
+        if (event.touches.length !== 1) return
+        startX = event.touches[0].clientX
+        startY = event.touches[0].clientY
+        swiped = false
+      },
+      {passive: true},
+    )
+    figure.addEventListener('touchend', (event) => {
+      if ((window.visualViewport?.scale ?? 1) > 1.05 || items.length < 2) return
+      const touch = event.changedTouches[0]
+      const dx = touch.clientX - startX
+      const dy = touch.clientY - startY
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        swiped = true
+        show(index + (dx < 0 ? 1 : -1))
+      }
+    })
+    image.addEventListener('click', () => {
+      if (swiped) {
+        swiped = false
+        return
+      }
+      if (items.length > 1) show(index + 1)
+    })
+    dialog.querySelector('[data-lb-prev]')?.addEventListener('click', () => show(index - 1))
+    dialog.querySelector('[data-lb-next]')?.addEventListener('click', () => show(index + 1))
+    dialog.querySelector('[data-lb-close]')?.addEventListener('click', () => dialog.close())
+    dialog.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowRight') show(index + 1)
+      if (event.key === 'ArrowLeft') show(index - 1)
+    })
+  }
+</script>

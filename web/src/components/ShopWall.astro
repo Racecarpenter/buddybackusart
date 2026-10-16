@@ -1,0 +1,41 @@
+---
+import Img from './Img.astro'
+import {aspect} from '../lib/image'
+import {availability, money} from '../lib/format'
+import type {ProductCard} from '../lib/types'
+
+interface Props {
+  products: ProductCard[]
+  eagerCount?: number
+}
+
+const {products, eagerCount = 0} = Astro.props
+---
+
+<ul class="wall">
+  {
+    products.map((p, i) => {
+      const state = availability(p)
+      return (
+        <li style={`--ar:${p.cover ? aspect(p.cover) : 1}`}>
+          <a href={`/shop/${p.slug}`}>
+            {p.cover && <Img img={p.cover} sizes="(min-width: 900px) 33vw, 100vw" eager={i < eagerCount} />}
+            <span class="plate">
+              <span>{p.title}</span>
+              <span class="plate-row mute">
+                <span>{money(p.price)}</span>
+                {state === 'soldOut' && <span class="soldmark">Sold out</span>}
+                {state === 'comingSoon' && <span>Coming soon</span>}
+                {state === 'available' && (
+                  <span>
+                    {p.quantity <= 3 ? `${p.quantity} left of ${p.editionSize}` : `Edition of ${p.editionSize}`}
+                  </span>
+                )}
+              </span>
+            </span>
+          </a>
+        </li>
+      )
+    })
+  }
+</ul>

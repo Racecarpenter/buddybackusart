@@ -1,0 +1,32 @@
+---
+import {aspect, imgSrc, imgSrcset} from '../lib/image'
+import type {Img as ImgType} from '../lib/types'
+
+interface Props {
+  img: ImgType
+  sizes?: string
+  widths?: number[]
+  eager?: boolean
+  alt?: string
+}
+
+const {img, sizes = '100vw', widths = [480, 800, 1200, 1800, 2400], eager = false, alt} = Astro.props
+
+// Width and height attributes reserve the space, so nothing jumps while images load.
+const width = 1200
+const height = Math.round(width / aspect(img))
+const lqip = img.meta?.lqip
+---
+
+<img
+  src={imgSrc(img, 1200)}
+  srcset={imgSrcset(img, widths)}
+  sizes={sizes}
+  width={width}
+  height={height}
+  alt={alt ?? img.alt ?? ''}
+  loading={eager ? 'eager' : 'lazy'}
+  decoding="async"
+  fetchpriority={eager ? 'high' : undefined}
+  style={lqip ? `background-image:url(${lqip});background-size:cover` : undefined}
+/>

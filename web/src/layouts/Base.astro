@@ -1,0 +1,70 @@
+---
+import '@fontsource-variable/hanken-grotesk'
+import fontUrl from '@fontsource-variable/hanken-grotesk/files/hanken-grotesk-latin-wght-normal.woff2?url'
+import '../styles/global.css'
+import Lightbox from '../components/Lightbox.astro'
+import {getSettings} from '../lib/data'
+import {isPreview} from '../lib/sanity'
+
+interface Props {
+  title?: string
+  description?: string
+  image?: string
+}
+
+const {title, description, image} = Astro.props
+const settings = await getSettings()
+
+const pageTitle = title ? `${title} – ${settings.siteTitle}` : settings.siteTitle
+const desc = description ?? settings.tagline ?? ''
+const canonical = new URL(Astro.url.pathname, Astro.url.origin).href
+const ogImage = image ? new URL(image, Astro.url.origin).href : undefined
+const path = Astro.url.pathname
+const current = (prefix: string) =>
+  path === prefix || path.startsWith(`${prefix}/`) ? 'page' : undefined
+const handle = settings.instagram?.replace(/^@/, '')
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f1f1ef" />
+    <link rel="preload" href={fontUrl} as="font" type="font/woff2" crossorigin />
+    <title>{pageTitle}</title>
+    <meta name="description" content={desc} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={desc} />
+    <meta property="og:url" content={canonical} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
+    <slot name="head" />
+  </head>
+  <body>
+    {isPreview && <p class="preview-note">Preview with sample content. Set SANITY_PROJECT_ID to show your own.</p>}
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="bar">
+      <a class="mark" href="/">{settings.siteTitle}</a>
+      <nav aria-label="Main">
+        <a href="/work" aria-current={current('/work')}>Work</a>
+        <a href="/shop" aria-current={current('/shop')}>Shop</a>
+        <a href="/about" aria-current={current('/about')}>About</a>
+      </nav>
+    </header>
+    <main id="main">
+      <slot />
+    </main>
+    <footer class="foot">
+      <span>© {new Date().getFullYear()} {settings.siteTitle}</span>
+      <span class="foot-links">
+        {settings.email && <a href={`mailto:${settings.email}`}>{settings.email}</a>}
+        {handle && <a href={`https://instagram.com/${handle}`} rel="noopener">Instagram</a>}
+      </span>
+    </footer>
+    <Lightbox />
+  </body>
+</html>
